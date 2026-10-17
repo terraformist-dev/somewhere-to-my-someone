@@ -2,7 +2,7 @@ package dev.terraformist.someone
 
 /**
  * The owner's Firebase project. Both values come from the Firebase console:
- *  - API_KEY: Project settings (gear) → General → "Web API key".
+ *  - API_KEY: Project settings (gear) → General → Your apps → the web app → apiKey ("AIza…").
  *  - DATABASE_URL: Realtime Database → Data, the link at the top (ends in firebasedatabase.app).
  *
  * These aren't secrets: Firebase expects them to ship inside apps. What keeps the data private
@@ -10,6 +10,6 @@ package dev.terraformist.someone
  * phone before it's sent. Until both are filled in, the app says it isn't connected yet.
  */
 object FirebaseSetup {
-    const val API_KEY = ""
-    const val DATABASE_URL = ""
+    const val API_KEY = "AIzaSyA3svTdktD1200m1hc3d5lwE_UhuO172Hs"
+    const val DATABASE_URL = "https://somewhere-to-my-someone-default-rtdb.europe-west1.firebasedatabase.app"
 }
