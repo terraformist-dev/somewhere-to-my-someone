@@ -1,0 +1,42 @@
+{
+  "rules": {
+    ".read": false,
+    ".write": false,
+    "codes": {
+      "$code": {
+        ".read": "auth != null",
+        ".write": "auth != null && ((!data.exists() && newData.child('o').val() === auth.uid) || (data.exists() && (data.child('o').val() === auth.uid || data.child('x').val() < now)))",
+        ".validate": "$code.matches(/^[0-9]{6}$/) && newData.hasChildren(['p', 'o', 'x']) && newData.child('o').val() === auth.uid && newData.child('p').isString() && newData.child('x').isNumber() && newData.child('x').val() <= now + 900000"
+      }
+    },
+    "pairs": {
+      "$pair": {
+        ".read": "auth != null && (data.child('a').val() === auth.uid || data.child('b').val() === auth.uid || !data.child('b').exists())",
+        ".write": "auth != null && !newData.exists() && (data.child('a').val() === auth.uid || data.child('b').val() === auth.uid)",
+        "a": {
+          ".write": "auth != null && !data.exists() && newData.val() === auth.uid"
+        },
+        "ka": {
+          ".write": "auth != null && !data.exists() && newData.parent().child('a').val() === auth.uid",
+          ".validate": "newData.isString() && newData.val().length < 400"
+        },
+        "b": {
+          ".write": "auth != null && !data.exists() && newData.val() === auth.uid && newData.parent().child('a').exists() && newData.parent().child('a').val() !== auth.uid"
+        },
+        "kb": {
+          ".write": "auth != null && !data.exists() && newData.parent().child('b').val() === auth.uid",
+          ".validate": "newData.isString() && newData.val().length < 400"
+        },
+        "loc": {
+          "$uid": {
+            ".write": "auth != null && auth.uid === $uid && root.child('pairs').child($pair).child('b').exists() && (root.child('pairs').child($pair).child('a').val() === auth.uid || root.child('pairs').child($pair).child('b').val() === auth.uid)",
+            ".validate": "newData.hasChildren(['c', 't']) && newData.child('c').isString() && newData.child('c').val().length < 2000 && newData.child('t').val() === now"
+          }
+        },
+        "$other": {
+          ".validate": false
+        }
+      }
+    }
+  }
+}

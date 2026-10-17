@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- The notification icon: the app's heart, in the same shape as everywhere else. -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="24dp"
+    android:height="24dp"
+    android:viewportWidth="24"
+    android:viewportHeight="24">
+    <path
+        android:fillColor="#FFFFFFFF"
+        android:pathData="M12,20.5C7.8,16.9 2,12.1 2,7.8C2,3 5.6,1 8.6,1C10.4,1 11.4,2.8 12,4.4C12.6,2.8 13.6,1 15.4,1C18.4,1 22,3 22,7.8C22,12.1 16.2,16.9 12,20.5Z" />
+</vector>

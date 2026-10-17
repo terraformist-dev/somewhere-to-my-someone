@@ -1,0 +1,610 @@
+<?xml version="1.0" encoding="utf-8"?>
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="#000000"
+    android:fitsSystemWindows="true">
+
+    <!-- ========== The compass ========== -->
+    <dev.terraformist.someone.CompassView
+        android:id="@+id/compass"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent" />
+
+    <TextView
+        android:id="@+id/directions"
+        android:layout_width="match_parent"
+        android:layout_height="56dp"
+        android:layout_gravity="bottom"
+        android:layout_marginStart="24dp"
+        android:layout_marginEnd="24dp"
+        android:layout_marginBottom="28dp"
+        android:background="@drawable/button_pill"
+        android:clickable="true"
+        android:focusable="true"
+        android:gravity="center"
+        android:letterSpacing="0.12"
+        android:text="@string/directions"
+        android:textColor="#000000"
+        android:textSize="13sp" />
+
+    <!-- An invisible tap area over the drawn title, placed in code. Opens the settings. -->
+    <View
+        android:id="@+id/title_tap"
+        android:layout_width="200dp"
+        android:layout_height="48dp"
+        android:layout_gravity="top|center_horizontal"
+        android:clickable="true"
+        android:contentDescription="@string/settings_open"
+        android:focusable="true" />
+
+    <!-- ========== Not set up (no Firebase details in this build) ========== -->
+    <LinearLayout
+        android:id="@+id/setup_panel"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:background="#000000"
+        android:gravity="center"
+        android:orientation="vertical"
+        android:padding="32dp"
+        android:visibility="gone">
+
+        <dev.terraformist.someone.DotTextView
+            android:id="@+id/setup_headline"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content" />
+
+        <TextView
+            android:id="@+id/setup_text"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="24dp"
+            android:gravity="center"
+            android:lineSpacingMultiplier="1.4"
+            android:text="@string/setup_text"
+            android:textColor="#A8A8A8"
+            android:textSize="13sp" />
+    </LinearLayout>
+
+    <!-- ========== Pairing ========== -->
+    <ScrollView
+        android:id="@+id/pair_panel"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:background="#000000"
+        android:fillViewport="true"
+        android:visibility="gone">
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:paddingStart="24dp"
+            android:paddingTop="40dp"
+            android:paddingEnd="24dp"
+            android:paddingBottom="32dp">
+
+            <TextView
+                android:id="@+id/pair_title"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:gravity="center"
+                android:letterSpacing="0.16"
+                android:text="@string/title"
+                android:textColor="#8A8A8A"
+                android:textSize="11sp" />
+
+            <dev.terraformist.someone.PixelHeartView
+                android:layout_width="90dp"
+                android:layout_height="80dp"
+                android:layout_gravity="center_horizontal"
+                android:layout_marginTop="48dp"
+                android:importantForAccessibility="no" />
+
+            <dev.terraformist.someone.DotTextView
+                android:id="@+id/pair_headline1"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="32dp" />
+
+            <dev.terraformist.someone.DotTextView
+                android:id="@+id/pair_headline2"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="10dp" />
+
+            <TextView
+                android:id="@+id/pair_text"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="8dp"
+                android:layout_marginTop="20dp"
+                android:layout_marginEnd="8dp"
+                android:gravity="center"
+                android:lineSpacingMultiplier="1.4"
+                android:text="@string/pair_text"
+                android:textColor="#A8A8A8"
+                android:textSize="13sp" />
+
+            <LinearLayout
+                android:id="@+id/code_box"
+                android:layout_width="match_parent"
+                android:layout_height="112dp"
+                android:layout_marginTop="32dp"
+                android:background="@drawable/card_bg"
+                android:gravity="center"
+                android:orientation="vertical">
+
+                <dev.terraformist.someone.DotTextView
+                    android:id="@+id/code"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content" />
+
+                <TextView
+                    android:id="@+id/code_expires"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="12dp"
+                    android:letterSpacing="0.12"
+                    android:textColor="#8A8A8A"
+                    android:textSize="11sp" />
+            </LinearLayout>
+
+            <LinearLayout
+                android:id="@+id/enter_row"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="16dp"
+                android:gravity="center_vertical"
+                android:orientation="horizontal"
+                android:visibility="gone">
+
+                <EditText
+                    android:id="@+id/code_input"
+                    android:layout_width="0dp"
+                    android:layout_height="56dp"
+                    android:layout_weight="1"
+                    android:background="@drawable/card_bg"
+                    android:gravity="center"
+                    android:hint="@string/code_hint"
+                    android:importantForAutofill="no"
+                    android:inputType="number"
+                    android:letterSpacing="0.3"
+                    android:maxLength="7"
+                    android:textColor="#F2F2F2"
+                    android:textColorHint="#5A5A5A"
+                    android:textSize="20sp" />
+
+                <TextView
+                    android:id="@+id/join"
+                    android:layout_width="wrap_content"
+                    android:layout_height="56dp"
+                    android:layout_marginStart="12dp"
+                    android:background="@drawable/button_pill"
+                    android:clickable="true"
+                    android:focusable="true"
+                    android:gravity="center"
+                    android:letterSpacing="0.12"
+                    android:minWidth="88dp"
+                    android:paddingStart="20dp"
+                    android:paddingEnd="20dp"
+                    android:text="@string/join"
+                    android:textColor="#000000"
+                    android:textSize="13sp" />
+            </LinearLayout>
+
+            <TextView
+                android:id="@+id/pair_status"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="16dp"
+                android:gravity="center"
+                android:letterSpacing="0.1"
+                android:minHeight="20dp"
+                android:textColor="#FF4D55"
+                android:textSize="11sp" />
+
+            <Space
+                android:layout_width="match_parent"
+                android:layout_height="0dp"
+                android:layout_weight="1"
+                android:minHeight="24dp" />
+
+            <TextView
+                android:id="@+id/share_code"
+                android:layout_width="match_parent"
+                android:layout_height="56dp"
+                android:background="@drawable/button_pill"
+                android:clickable="true"
+                android:focusable="true"
+                android:gravity="center"
+                android:letterSpacing="0.12"
+                android:text="@string/share_code"
+                android:textColor="#000000"
+                android:textSize="13sp" />
+
+            <TextView
+                android:id="@+id/enter_code"
+                android:layout_width="match_parent"
+                android:layout_height="56dp"
+                android:layout_marginTop="12dp"
+                android:background="@drawable/button_outline"
+                android:clickable="true"
+                android:focusable="true"
+                android:gravity="center"
+                android:letterSpacing="0.12"
+                android:text="@string/enter_code"
+                android:textColor="#F2F2F2"
+                android:textSize="13sp" />
+
+            <TextView
+                android:id="@+id/pair_footer"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="20dp"
+                android:gravity="center"
+                android:lineSpacingMultiplier="1.4"
+                android:text="@string/pair_footer"
+                android:textColor="#8A8A8A"
+                android:textSize="11sp" />
+        </LinearLayout>
+    </ScrollView>
+
+    <!-- ========== What do you call them? ========== -->
+    <LinearLayout
+        android:id="@+id/name_panel"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:background="#000000"
+        android:orientation="vertical"
+        android:paddingStart="24dp"
+        android:paddingTop="40dp"
+        android:paddingEnd="24dp"
+        android:paddingBottom="32dp"
+        android:visibility="gone">
+
+        <TextView
+            android:id="@+id/name_title"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:gravity="center"
+            android:letterSpacing="0.16"
+            android:text="@string/title"
+            android:textColor="#8A8A8A"
+            android:textSize="11sp" />
+
+        <dev.terraformist.someone.MiniHeartView
+            android:layout_width="48dp"
+            android:layout_height="44dp"
+            android:layout_gravity="center_horizontal"
+            android:layout_marginTop="64dp"
+            android:importantForAccessibility="no" />
+
+        <dev.terraformist.someone.DotTextView
+            android:id="@+id/name_headline1"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="32dp" />
+
+        <dev.terraformist.someone.DotTextView
+            android:id="@+id/name_headline2"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="10dp" />
+
+        <TextView
+            android:id="@+id/name_text"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="20dp"
+            android:gravity="center"
+            android:lineSpacingMultiplier="1.4"
+            android:text="@string/name_text"
+            android:textColor="#A8A8A8"
+            android:textSize="13sp" />
+
+        <EditText
+            android:id="@+id/name_input"
+            android:layout_width="match_parent"
+            android:layout_height="56dp"
+            android:layout_marginTop="32dp"
+            android:background="@drawable/card_bg"
+            android:gravity="center"
+            android:hint="@string/name_hint"
+            android:importantForAutofill="no"
+            android:inputType="textCapCharacters|textPersonName"
+            android:maxLength="20"
+            android:textColor="#F2F2F2"
+            android:textColorHint="#5A5A5A"
+            android:textSize="18sp" />
+
+        <Space
+            android:layout_width="match_parent"
+            android:layout_height="0dp"
+            android:layout_weight="1" />
+
+        <TextView
+            android:id="@+id/save_name"
+            android:layout_width="match_parent"
+            android:layout_height="56dp"
+            android:background="@drawable/button_pill"
+            android:clickable="true"
+            android:focusable="true"
+            android:gravity="center"
+            android:letterSpacing="0.12"
+            android:text="@string/save"
+            android:textColor="#000000"
+            android:textSize="13sp" />
+    </LinearLayout>
+
+    <!-- ========== Settings: paired with, pause, unpair ========== -->
+    <ScrollView
+        android:id="@+id/settings_panel"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:background="#000000"
+        android:fillViewport="true"
+        android:visibility="gone">
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:paddingStart="24dp"
+            android:paddingTop="40dp"
+            android:paddingEnd="24dp"
+            android:paddingBottom="32dp">
+
+            <TextView
+                android:id="@+id/settings_title"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:gravity="center"
+                android:letterSpacing="0.16"
+                android:text="@string/title"
+                android:textColor="#8A8A8A"
+                android:textSize="11sp" />
+
+            <TextView
+                android:id="@+id/paired_with"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="48dp"
+                android:letterSpacing="0.14"
+                android:text="@string/paired_with"
+                android:textColor="#8A8A8A"
+                android:textSize="11sp" />
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="10dp"
+                android:gravity="center_vertical"
+                android:orientation="horizontal">
+
+                <dev.terraformist.someone.MiniHeartView
+                    android:layout_width="34dp"
+                    android:layout_height="32dp"
+                    android:importantForAccessibility="no" />
+
+                <TextView
+                    android:id="@+id/settings_name"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_marginStart="14dp"
+                    android:layout_weight="1"
+                    android:ellipsize="end"
+                    android:maxLines="1"
+                    android:textColor="#F2F2F2"
+                    android:textSize="30sp" />
+            </LinearLayout>
+
+            <TextView
+                android:id="@+id/settings_since"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="10dp"
+                android:letterSpacing="0.08"
+                android:textColor="#9A9A9A"
+                android:textSize="12sp" />
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="32dp"
+                android:background="@drawable/card_bg"
+                android:orientation="vertical"
+                android:paddingStart="20dp"
+                android:paddingTop="8dp"
+                android:paddingEnd="20dp"
+                android:paddingBottom="8dp">
+
+                <LinearLayout
+                    android:id="@+id/row_share"
+                    style="@style/SettingRow">
+
+                    <LinearLayout style="@style/SettingWords">
+
+                        <TextView
+                            android:id="@+id/share_label"
+                            style="@style/SettingLabel"
+                            android:text="@string/share_label" />
+
+                        <TextView
+                            android:id="@+id/share_help"
+                            style="@style/SettingHelp" />
+                    </LinearLayout>
+
+                    <TextView
+                        android:id="@+id/share_toggle"
+                        style="@style/SettingButton" />
+                </LinearLayout>
+
+                <LinearLayout
+                    android:id="@+id/row_pause"
+                    style="@style/SettingRow">
+
+                    <LinearLayout style="@style/SettingWords">
+
+                        <TextView
+                            android:id="@+id/pause_label"
+                            style="@style/SettingLabel"
+                            android:text="@string/pause_label" />
+
+                        <TextView
+                            android:id="@+id/pause_help"
+                            style="@style/SettingHelp" />
+                    </LinearLayout>
+
+                    <TextView
+                        android:id="@+id/pause_button"
+                        style="@style/SettingButton" />
+                </LinearLayout>
+
+                <LinearLayout
+                    android:id="@+id/row_name"
+                    style="@style/SettingRow">
+
+                    <LinearLayout style="@style/SettingWords">
+
+                        <TextView
+                            android:id="@+id/rename_label"
+                            style="@style/SettingLabel"
+                            android:text="@string/rename_label" />
+
+                        <TextView
+                            android:id="@+id/rename_help"
+                            style="@style/SettingHelp"
+                            android:text="@string/rename_help" />
+                    </LinearLayout>
+
+                    <TextView
+                        android:id="@+id/rename_button"
+                        style="@style/SettingButton"
+                        android:text="@string/change" />
+                </LinearLayout>
+
+                <LinearLayout
+                    android:id="@+id/row_bluetooth"
+                    style="@style/SettingRow">
+
+                    <LinearLayout style="@style/SettingWords">
+
+                        <TextView
+                            android:id="@+id/bluetooth_label"
+                            style="@style/SettingLabel"
+                            android:text="@string/bluetooth_label" />
+
+                        <TextView
+                            android:id="@+id/bluetooth_help"
+                            style="@style/SettingHelp"
+                            android:text="@string/bluetooth_help" />
+                    </LinearLayout>
+
+                    <TextView
+                        android:id="@+id/bluetooth_button"
+                        style="@style/SettingButton"
+                        android:text="@string/allow" />
+                </LinearLayout>
+
+                <LinearLayout
+                    android:id="@+id/row_battery"
+                    style="@style/SettingRow">
+
+                    <LinearLayout style="@style/SettingWords">
+
+                        <TextView
+                            android:id="@+id/battery_label"
+                            style="@style/SettingLabel"
+                            android:text="@string/battery_label" />
+
+                        <TextView
+                            android:id="@+id/battery_help"
+                            style="@style/SettingHelp"
+                            android:text="@string/battery_help" />
+                    </LinearLayout>
+
+                    <TextView
+                        android:id="@+id/battery_button"
+                        style="@style/SettingButton"
+                        android:text="@string/allow" />
+                </LinearLayout>
+
+                <LinearLayout
+                    android:id="@+id/row_restart"
+                    style="@style/SettingRow">
+
+                    <LinearLayout style="@style/SettingWords">
+
+                        <TextView
+                            android:id="@+id/restart_label"
+                            style="@style/SettingLabel"
+                            android:text="@string/restart_label" />
+
+                        <TextView
+                            android:id="@+id/restart_help"
+                            style="@style/SettingHelp"
+                            android:text="@string/restart_help" />
+                    </LinearLayout>
+
+                    <TextView
+                        android:id="@+id/restart_button"
+                        style="@style/SettingButton"
+                        android:text="@string/allow" />
+                </LinearLayout>
+            </LinearLayout>
+
+            <TextView
+                android:id="@+id/their_status"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="20dp"
+                android:letterSpacing="0.08"
+                android:textColor="#9A9A9A"
+                android:textSize="11sp" />
+
+            <Space
+                android:layout_width="match_parent"
+                android:layout_height="0dp"
+                android:layout_weight="1"
+                android:minHeight="32dp" />
+
+            <TextView
+                android:id="@+id/unpair"
+                android:layout_width="match_parent"
+                android:layout_height="56dp"
+                android:background="@drawable/button_red_outline"
+                android:clickable="true"
+                android:focusable="true"
+                android:gravity="center"
+                android:letterSpacing="0.12"
+                android:text="@string/unpair"
+                android:textColor="#FF4D55"
+                android:textSize="13sp" />
+
+            <TextView
+                android:id="@+id/unpair_help"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="12dp"
+                android:gravity="center"
+                android:text="@string/unpair_help"
+                android:textColor="#8A8A8A"
+                android:textSize="11sp" />
+
+            <TextView
+                android:id="@+id/settings_back"
+                android:layout_width="match_parent"
+                android:layout_height="56dp"
+                android:layout_marginTop="16dp"
+                android:background="@drawable/button_pill"
+                android:clickable="true"
+                android:focusable="true"
+                android:gravity="center"
+                android:letterSpacing="0.12"
+                android:text="@string/back"
+                android:textColor="#000000"
+                android:textSize="13sp" />
+        </LinearLayout>
+    </ScrollView>
+</FrameLayout>

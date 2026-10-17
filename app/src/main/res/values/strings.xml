@@ -1,0 +1,41 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">Somewhere to my Someone</string>
+    <string name="title">SOMEWHERE TO MY SOMEONE</string>
+    <string name="widget_small_description">Arrow and distance to your someone</string>
+    <string name="widget_wide_description">Arrow, distance, and when you\'re together</string>
+    <string name="toy_name">Somewhere to my Someone</string>
+    <string name="toy_summary">A heart that points to your someone. Long-press for the distance.</string>
+    <string name="directions">WALKING DIRECTIONS</string>
+    <string name="settings_open">Pairing and sharing settings</string>
+
+    <string name="setup_text">This copy of the app isn\'t connected to its Firebase project yet, so it can\'t pair. A newer build will fix it.</string>
+
+    <string name="pair_text">You can pair with one person. Show them this code, or type in theirs. Both of you have to agree.</string>
+    <string name="code_hint">000 000</string>
+    <string name="join">PAIR</string>
+    <string name="share_code">SHARE MY CODE</string>
+    <string name="enter_code">ENTER THEIR CODE</string>
+    <string name="pair_footer">Locations are scrambled on your phone before they\'re sent.\nOnly your someone can read yours.</string>
+
+    <string name="name_text">Just for this phone. They won\'t see it.</string>
+    <string name="name_hint">THEIR NAME</string>
+    <string name="save">SAVE</string>
+
+    <string name="paired_with">PAIRED WITH</string>
+    <string name="share_label">Share my location</string>
+    <string name="pause_label">Pause sharing</string>
+    <string name="rename_label">What you call them</string>
+    <string name="rename_help">Only on this phone</string>
+    <string name="change">CHANGE</string>
+    <string name="bluetooth_label">Bluetooth check</string>
+    <string name="bluetooth_help">Needed to know when you\'re together</string>
+    <string name="battery_label">Run in the background</string>
+    <string name="battery_help">So the battery saver doesn\'t stop it</string>
+    <string name="restart_label">Start again after a restart</string>
+    <string name="restart_help">Needs location \"Allow all the time\"</string>
+    <string name="allow">ALLOW</string>
+    <string name="unpair">UNPAIR</string>
+    <string name="unpair_help">Stops sharing for both of you, straight away.</string>
+    <string name="back">BACK</string>
+</resources>
