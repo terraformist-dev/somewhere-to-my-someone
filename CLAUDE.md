@@ -86,4 +86,9 @@ middle). `Where.offer` keeps a rough fix from overwriting a recent good one. The
 - Widget: north up; flip-book of 15 frames for merge/part (widgets can't animate smoothly).
 - Glyph: white only. Small 5×5 dot heart at the edge pointing to them (pulse speeds up when
   close, needle within 2 km); together = 9×8 heart in the middle; merge animation in dots.
+- **Glyph switch-on** (`MatrixArt.intro`, 1.25 s, plays once each time the toy is picked, from
+  `onServiceConnected`): two dots slide in from left and right, meet, become the big heart, beat
+  twice (lub-dub), then fade into the normal frame. The owner wants every Somewhere toy to have its
+  own switch-on so he can tell them apart while cycling; Somewhere to Nothing's is "everything →
+  nothing → somewhere" (whole matrix dissolves to a dot that shoots out). Don't reuse either for a sibling.
 - Names are typed by each person on their own phone ("what do you call them?"), stored locally only.

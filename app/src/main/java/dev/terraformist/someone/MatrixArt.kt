@@ -138,4 +138,48 @@ object MatrixArt {
         val phase = (now % period).toDouble() / period
         return 0.3 + 0.7 * (0.5 + 0.5 * cos(2 * PI * phase))
     }
+
+    // ---------- Switch-on ----------
+
+    /** How long the switch-on lasts. */
+    const val INTRO_MS = 1_250L
+
+    /**
+     * The switch-on, played once when this toy is picked, so it's easy to tell apart from the
+     * other Somewhere toys: two dots slide in from either side, meet in the middle, become a
+     * big heart that beats twice (lub-dub), then fade into the normal picture ([after]).
+     */
+    fun intro(elapsed: Long, after: DotGrid): DotGrid {
+        val grid = DotGrid(GlyphShape.SIZE, GlyphShape.SIZE)
+        val t = elapsed.coerceAtLeast(0L)
+        when {
+            t < 380L -> {
+                // Two dots racing in from the edges, each with a fading trail.
+                val q = t / 380.0
+                val e = q * q
+                for (back in 0..2) {
+                    val p = (e - back * 0.06).coerceAtLeast(0.0)
+                    val step = (p * 10).roundToInt()
+                    val level = 255 - back * 90
+                    grid.lift(1 + step, 12, level)
+                    grid.lift(23 - step, 12, level)
+                }
+            }
+            t < 480L -> stamp(grid, SMALL, C, C, 255)
+            t < 620L -> stamp(grid, BIG, C, C - 0.5, 255)
+            t < 700L -> stamp(grid, BIG, C, C - 0.5, 110)
+            t < 820L -> stamp(grid, BIG, C, C - 0.5, 255)
+            else -> {
+                // Fade the heart out while the normal picture fades in.
+                val q = ((t - 820L) / (INTRO_MS - 820.0)).coerceIn(0.0, 1.0)
+                stamp(grid, BIG, C, C - 0.5, (200 * (1 - q)).toInt())
+                for (k in after.levels.indices) {
+                    val x = k % GlyphShape.SIZE
+                    val y = k / GlyphShape.SIZE
+                    grid.lift(x, y, (after.levels[k] * q).toInt())
+                }
+            }
+        }
+        return grid
+    }
 }

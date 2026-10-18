@@ -47,6 +47,9 @@ class HeartToyService : Service() {
     private var watcher: LocationListener? = null
     private var sensing = false
 
+    /** When the switch-on started (0 = not playing). */
+    private var introAt = 0L
+
     private var liveUntil = 0L
     private var distanceUntil = 0L
     private var alwaysOn = false
@@ -120,6 +123,7 @@ class HeartToyService : Service() {
             override fun onServiceConnected(name: ComponentName?) {
                 manager.register(Glyph.DEVICE_23112)
                 connected = true
+                introAt = System.currentTimeMillis()
                 Where.refresh(applicationContext) { location -> location?.let { heading.setLocation(it) } }
                 liveFor(LIVE_MS)
             }
@@ -190,7 +194,10 @@ class HeartToyService : Service() {
         val facing = heading.degrees
         // Without a compass reading yet, the top of the matrix stands for north.
         val angle = snap.reading?.let { if (facing != null) it.bearing - facing else it.bearing } ?: 0.0
-        val grid = MatrixArt.render(snap, angle, now, showDistance = now < distanceUntil, still = still, dim = alwaysOn)
+        var grid = MatrixArt.render(snap, angle, now, showDistance = now < distanceUntil, still = still, dim = alwaysOn)
+        if (introAt != 0L) {
+            if (now - introAt < MatrixArt.INTRO_MS && !still) grid = MatrixArt.intro(now - introAt, grid) else introAt = 0L
+        }
         val frame = IntArray(GlyphShape.SIZE * GlyphShape.SIZE) { i ->
             val x = i % GlyphShape.SIZE
             val y = i / GlyphShape.SIZE
