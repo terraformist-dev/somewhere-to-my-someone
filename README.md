@@ -1,9 +1,7 @@
 # Somewhere to my Someone
 
 A compass for the Nothing Phone (3) that points to one person's phone (your someone) and
-tells you how far away they are. A little red heart on the compass marks where they are.
-When you're right next to each other, two hearts circle in and merge into one bigger heart.
-When you part, it splits back into two.
+tells you how far away they are.
 
 It lives in:
 
@@ -27,7 +25,7 @@ you'd unpair first, which stops sharing for both of you.
 ## Privacy
 
 - Your location is scrambled on your phone before it's sent. Only your someone's phone can
-  unscramble it. The server in the middle (your own Firebase project) only holds gibberish.
+  unscramble it. The server in the middle (Firebase) only holds gibberish.
 - You get one notification when you start sharing. Android also needs a silent one while sharing
   runs in the background; it's tucked away at the bottom of the notification shade.
 - Either of you can pause for an hour, switch sharing off, or unpair at any time.
@@ -35,9 +33,7 @@ you'd unpair first, which stops sharing for both of you.
 
 ## How "together" works
 
-GPS is only accurate to 5–20 metres outdoors, and indoors phones often fall back on Wi-Fi, which
-can put two people in the same house on exactly the same spot. So when you're closer than the
-positions can tell apart, the app says **NEAR** (with roughly how near) instead of showing a
+When you're closer than the positions can tell apart, the app says **NEAR** (with roughly how near) instead of showing a
 distance and an arrow that would just be guesses.
 
 When you're within 500 m, both phones switch on a private Bluetooth signal that only the other
@@ -45,7 +41,7 @@ recognises. A strong signal (about arm's length) for a couple of seconds means y
 The hearts split when the signal has been weak (another room) for 15 seconds, or gone for 25.
 
 The settings screen (tap the title) shows the live Bluetooth signal and how accurate each GPS
-position is, which helps fine-tune this.
+position is, which helps fine tune this.
 
 ## Getting the app onto your phone
 
