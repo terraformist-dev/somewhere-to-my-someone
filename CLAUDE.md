@@ -45,14 +45,30 @@ Bluetooth token: first 8 bytes of HMAC(subkey, "role|window"), window = 15 min.
 
 ## Sharing service (`SharingService.kt`)
 
-Foreground service, type location (+ connectedDevice when Bluetooth is allowed), with a
-notification (Pause for 1 hour / Share again). Started from the app (while-in-use location is
-enough), from boot/update only with background location. Sync interval: 5 s app open,
-30 s under 1 km, 2 min under 5 km or together, else 5 min. Bluetooth (`Near.kt`) advertises
-and scans only under 500 m or while together. `TogetherJudge`: together after RSSI ≥ −72 dBm
-(smoothed) for 8 s; apart after nothing ≥ −88 dBm for 60 s. If either phone can't do Bluetooth,
-falls back on GPS (≤ 20 m together, > 60 m apart). Merge triggers a heartbeat vibration and the
-widget flip-book.
+Foreground service, type location (+ connectedDevice when Bluetooth is allowed). Started from
+the app (while-in-use location is enough), from boot/update only with background location.
+Sync interval: 5 s app open, 30 s under 1 km, 2 min under 5 km or together, else 5 min.
+
+**Notifications (owner's request after testing):** exactly one visible notification when sharing
+starts (`announce()`, channel `news`, shown again only if sharing is switched off and on). The
+foreground-service notification is on channel `sharing_quiet` (IMPORTANCE_MIN: silent, no status
+bar icon), posted once by `startForeground` (never re-posted on later `start()` calls) and only
+re-notified when sending/paused/off changes. Don't add per-minute or "together" text to it.
+
+**Together** (`Near.kt`): Bluetooth advertises/scans under 500 m or while together; FAST
+(low-latency) while the app is open, BALANCED otherwise, low-power scan while together.
+`TogetherJudge` uses the median RSSI of recent readings: together if ≥ 2 readings in 5 s with
+median ≥ −67 dBm, or any one ≥ −55; apart if median < −80 for 15 s or nothing heard for 25 s.
+A 3 s `judgeTick` re-evaluates while Bluetooth is on (before this, parting waited for the 2-min sync).
+Without Bluetooth: GPS ≤ 15 m together, > 40 m apart. Thresholds are first guesses; the settings
+screen shows live diagnostics (RSSI, both GPS accuracies, GPS distance) for tuning from real use.
+Merge triggers a heartbeat vibration and the widget flip-book.
+
+**NEAR** (`Reading.near`): indoors both phones often get the same Wi-Fi position, so distance and
+bearing under the combined GPS accuracy (hypot of both, min 20 m) are noise. Shown as "NEAR /
+WITHIN ~N M" with no arrow (heart beating in the middle of the dial; Glyph: small heart in the
+middle). `Where.offer` keeps a rough fix from overwriting a recent good one. The compass shows
+"COMPASS UNSURE: WAVE PHONE IN A FIGURE OF 8" when the rotation sensor reports low accuracy.
 
 ## Design (agreed with the owner from a mockup canvas)
 

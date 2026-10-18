@@ -14,6 +14,7 @@ import kotlin.math.sqrt
  *    when close; within 2 km a needle joins it to the centre;
  *  - together: one bigger heart in the middle, beating;
  *  - coming together: two little hearts circle in and merge (and split again when you part);
+ *  - near (too close for GPS to give a direction): a little heart in the middle, beating fast;
  *  - they've paused: a dim little heart in the middle;
  *  - after a long-press of the Glyph Button: the distance in numbers for a few seconds.
  */
@@ -47,6 +48,7 @@ object MatrixArt {
             showDistance && snap.scene == Scene.APART && r != null -> distance(grid, r)
             merge != null -> hearts(grid, merge, now, still)
             snap.scene == Scene.APART && r != null -> pointer(grid, r, angle, now, still)
+            snap.scene == Scene.NEAR -> stamp(grid, SMALL, C, C, (255 * pulse(now, 900L, still)).toInt())
             snap.scene == Scene.PAUSED -> stamp(grid, SMALL, C, C, 90)
             // Not paired, or waiting to hear from them: a lone centre dot, breathing.
             else -> grid.set(12, 12, (255 * pulse(now, 2_400L, still)).toInt())

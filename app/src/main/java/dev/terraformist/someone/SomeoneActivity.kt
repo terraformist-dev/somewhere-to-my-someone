@@ -80,6 +80,7 @@ class SomeoneActivity : Activity() {
 
         heading = Heading(this, Facing.SCREEN) {
             compass.heading = it
+            compass.calibrate = heading.needsCalibrating
             compass.invalidate()
         }
 
@@ -115,6 +116,7 @@ class SomeoneActivity : Activity() {
         Us.unlisten(this, usChanged)
         stopSensing()
         main.removeCallbacks(pairTick)
+        main.removeCallbacks(settingsTick)
         // Tell sharing to slow down again, and leave the widget up to date.
         if (SharingService.running) SharingService.start(this)
         SomeoneWidget.refreshAll(this)
@@ -555,11 +557,36 @@ class SomeoneActivity : Activity() {
         findViewById<View>(R.id.row_restart).visibility = if (Where.hasBackground(this)) View.GONE else View.VISIBLE
 
         val them = Us.them(this)
-        findViewById<TextView>(R.id.their_status).text = when {
+        val status = when {
             Us.theyPaused(this) -> "$name HAS PAUSED SHARING"
             them == null -> "WAITING TO HEAR FROM $name"
             else -> "$name LAST SHARED ${Geo.ago(them.fixAt)}"
         }
+        findViewById<TextView>(R.id.their_status).text = status + "\n\n" + diagnostics()
+
+        // Keep the numbers live while settings are open.
+        main.removeCallbacks(settingsTick)
+        main.postDelayed(settingsTick, 2_000L)
+    }
+
+    private val settingsTick = Runnable { if (panel == Panel.SETTINGS && resumed) showSettings() }
+
+    /** The raw numbers, so the together check can be tuned from real readings. */
+    private fun diagnostics(): String {
+        val now = System.currentTimeMillis()
+        val signal = SharingService.signal
+        val heard = when {
+            !Near.permitted(this) -> "BLUETOOTH: NOT ALLOWED"
+            signal == null || now - SharingService.signalAt > 60_000L -> "BLUETOOTH: NOT HEARD"
+            else -> "BLUETOOTH: $signal DBM, ${(now - SharingService.signalAt) / 1000} S AGO"
+        }
+        val me = Where.last(this)
+        val them = Us.them(this)
+        val mine = me?.let { "±${it.accuracy.toInt()} M" } ?: "?"
+        val theirs = them?.let { "±${it.accuracy.toInt()} M" } ?: "?"
+        val reading = Us.reading(this)
+        val gps = reading?.let { "${it.meters.toInt()} M APART" } ?: "?"
+        return "$heard\nGPS: YOU $mine · THEM $theirs · $gps"
     }
 
     private fun pill(view: TextView, text: String, filled: Boolean) {

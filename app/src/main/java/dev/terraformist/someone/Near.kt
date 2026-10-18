@@ -24,7 +24,7 @@ import android.util.Log
  */
 class Near(private val context: Context, private val onSighting: (Int) -> Unit) {
 
-    enum class Speed { OFF, SLOW, NORMAL }
+    enum class Speed { OFF, SLOW, NORMAL, FAST }
 
     private val adapter get() = context.getSystemService(BluetoothManager::class.java)?.adapter
 
@@ -68,8 +68,11 @@ class Near(private val context: Context, private val onSighting: (Int) -> Unit) 
         val advertiser = adapter?.bluetoothLeAdvertiser ?: return
         val settings = AdvertiseSettings.Builder()
             .setAdvertiseMode(
-                if (speed == Speed.NORMAL) AdvertiseSettings.ADVERTISE_MODE_BALANCED
-                else AdvertiseSettings.ADVERTISE_MODE_LOW_POWER,
+                when (speed) {
+                    Speed.FAST -> AdvertiseSettings.ADVERTISE_MODE_LOW_LATENCY
+                    Speed.NORMAL -> AdvertiseSettings.ADVERTISE_MODE_BALANCED
+                    else -> AdvertiseSettings.ADVERTISE_MODE_LOW_POWER
+                },
             )
             .setTxPowerLevel(AdvertiseSettings.ADVERTISE_TX_POWER_MEDIUM)
             .setConnectable(false)
@@ -133,7 +136,14 @@ class Near(private val context: Context, private val onSighting: (Int) -> Unit) 
         val scanner = adapter?.bluetoothLeScanner ?: return
         val filter = ScanFilter.Builder().setServiceData(SERVICE, ByteArray(0)).build()
         val settings = ScanSettings.Builder()
-            .setScanMode(if (speed == Speed.NORMAL) ScanSettings.SCAN_MODE_BALANCED else ScanSettings.SCAN_MODE_LOW_POWER)
+            .setScanMode(
+                when (speed) {
+                    Speed.FAST -> ScanSettings.SCAN_MODE_LOW_LATENCY
+                    Speed.NORMAL -> ScanSettings.SCAN_MODE_BALANCED
+                    else -> ScanSettings.SCAN_MODE_LOW_POWER
+                },
+            )
+            .setReportDelay(0L)
             .setCallbackType(ScanSettings.CALLBACK_TYPE_ALL_MATCHES)
             .build()
         try {
@@ -169,73 +179,94 @@ class Near(private val context: Context, private val onSighting: (Int) -> Unit) 
 }
 
 /**
- * Deciding "together" and "apart" from the Bluetooth sightings, slowly on purpose so the
- * hearts don't flicker: together after a strong signal for [JOIN_MS], apart only after the
- * signal has been weak or missing for [PART_MS]. Without Bluetooth it falls back on GPS,
- * which is much rougher. No Android code, so it's easy to check.
+ * Deciding "together" and "apart" from the Bluetooth sightings. Uses the middle value of the
+ * last few seconds' readings (one odd reading, like a hand over the phone, doesn't count).
+ *  - together: a strong signal (about arm's length) for a couple of readings, or one very
+ *    strong one;
+ *  - apart: the signal has been weak (another room) for [PART_MS], or not heard at all
+ *    for [LOST_MS].
+ * Without Bluetooth it falls back on GPS, which is much rougher. No Android code, so it's easy to check.
  */
 class TogetherJudge {
 
-    private var smoothed: Double? = null
-    private var lastSeen = 0L
-    private var strongSince = 0L
-    private var lastStrong = 0L
-    private var lastNear = 0L
+    private val readings = ArrayDeque<Pair<Long, Int>>()
+    private var weakSince = 0L
+    private var lastHeard = 0L
+
+    /** The latest middle value, for the diagnostics line. */
+    var signal: Int? = null
+        private set
+    var signalAt = 0L
+        private set
 
     fun sighting(rssi: Int, now: Long) {
-        val previous = smoothed
-        smoothed = if (previous == null || now - lastSeen > 10_000L) rssi.toDouble() else previous * 0.7 + rssi * 0.3
-        lastSeen = now
-        val s = smoothed ?: return
-        if (s >= STRONG_DBM) {
-            if (strongSince == 0L) strongSince = now
-            lastStrong = now
+        readings.addLast(now to rssi)
+        while (readings.isNotEmpty() && now - readings.first().first > WINDOW_MS) readings.removeFirst()
+        lastHeard = now
+        val m = median(now, WINDOW_MS) ?: return
+        signal = m
+        signalAt = now
+        if (m < PART_DBM) {
+            if (weakSince == 0L) weakSince = now
         } else {
-            strongSince = 0L
+            weakSince = 0L
         }
-        if (s >= NEAR_DBM) lastNear = now
+    }
+
+    private fun median(now: Long, within: Long): Int? {
+        val recent = readings.filter { now - it.first <= within }.map { it.second }.sorted()
+        if (recent.isEmpty()) return null
+        return recent[recent.size / 2]
     }
 
     /**
      * @param together what we think now.
-     * @param bluetooth whether Bluetooth is working on this phone.
+     * @param bluetooth whether Bluetooth is working on both phones.
      * @param gpsMeters distance between the two last known positions, if both are fresh.
      */
     fun decide(now: Long, together: Boolean, bluetooth: Boolean, gpsMeters: Double?): Boolean {
         if (bluetooth) {
             return if (!together) {
-                strongSince != 0L && now - strongSince >= JOIN_MS && now - lastStrong < 5_000L
+                val recent = readings.filter { now - it.first <= JOIN_WINDOW_MS }
+                val m = median(now, JOIN_WINDOW_MS)
+                (recent.size >= 2 && m != null && m >= JOIN_DBM) || recent.any { it.second >= SURE_DBM }
             } else {
-                now - lastNear < PART_MS
+                val lost = lastHeard == 0L || now - lastHeard > LOST_MS
+                val weak = weakSince != 0L && now - weakSince > PART_MS
+                !(lost || weak)
             }
         }
         if (gpsMeters == null) return together
         return if (together) gpsMeters < GPS_PART_METERS else gpsMeters <= GPS_JOIN_METERS
     }
 
-    /** Starting up while already together: give the signal a full minute to turn up before parting. */
+    /** Starting up while already together: give the signal time to turn up before parting. */
     fun assumeNear(now: Long) {
-        lastNear = now
+        lastHeard = now
     }
 
-    /** Forget the signal history (after a long gap, or on unpairing). */
+    /** Forget the signal history (after parting, or on unpairing). */
     fun reset() {
-        smoothed = null
-        strongSince = 0L
-        lastStrong = 0L
+        readings.clear()
+        weakSince = 0L
     }
 
     companion object {
-        /** About two or three metres, phone to phone. */
-        const val STRONG_DBM = -72.0
+        /** About one or two metres, phone to phone. */
+        const val JOIN_DBM = -67
 
-        /** Still in the same room or so. */
-        const val NEAR_DBM = -88.0
+        /** Right next to each other: one reading is enough. */
+        const val SURE_DBM = -55
 
-        const val JOIN_MS = 8_000L
-        const val PART_MS = 60_000L
+        /** Weaker than this is another room. */
+        const val PART_DBM = -80
 
-        const val GPS_JOIN_METERS = 20.0
-        const val GPS_PART_METERS = 60.0
+        const val WINDOW_MS = 8_000L
+        const val JOIN_WINDOW_MS = 5_000L
+        const val PART_MS = 15_000L
+        const val LOST_MS = 25_000L
+
+        const val GPS_JOIN_METERS = 15.0
+        const val GPS_PART_METERS = 40.0
     }
 }

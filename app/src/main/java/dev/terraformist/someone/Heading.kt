@@ -47,6 +47,13 @@ class Heading(
 
     val available: Boolean get() = rotation != null
 
+    /**
+     * True when the phone says its compass is unsure (it needs waving in a figure of eight).
+     * Magnets, laptops and steel nearby can upset it.
+     */
+    var needsCalibrating = false
+        private set
+
     fun start() {
         if (started || rotation == null) return
         started = true
@@ -69,6 +76,8 @@ class Heading(
     }
 
     override fun onSensorChanged(event: SensorEvent) {
+        needsCalibrating = event.accuracy == SensorManager.SENSOR_STATUS_UNRELIABLE ||
+            event.accuracy == SensorManager.SENSOR_STATUS_ACCURACY_LOW
         SensorManager.getRotationMatrixFromVector(matrix, event.values)
         // Columns of the matrix are the phone's axes in world terms (east, north, up).
         // Top of the phone (Y axis):

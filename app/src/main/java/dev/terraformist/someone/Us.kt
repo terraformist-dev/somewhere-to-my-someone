@@ -102,7 +102,17 @@ object Us {
     fun sharing(context: Context): Boolean = prefs(context).getBoolean("sharing", true)
 
     fun setSharing(context: Context, on: Boolean) {
-        prefs(context).edit().putBoolean("sharing", on).remove("paused_until").apply()
+        val edit = prefs(context).edit().putBoolean("sharing", on).remove("paused_until")
+        // Switching sharing back on counts as starting again, so it's announced again.
+        if (on && !sharing(context)) edit.putBoolean("announced", false)
+        edit.apply()
+    }
+
+    /** Whether the one "you're now sharing" notification has been shown for this stretch of sharing. */
+    fun announced(context: Context): Boolean = prefs(context).getBoolean("announced", false)
+
+    fun setAnnounced(context: Context) {
+        prefs(context).edit().putBoolean("announced", true).apply()
     }
 
     fun pausedUntil(context: Context): Long = prefs(context).getLong("paused_until", 0L)
@@ -155,7 +165,9 @@ object Us {
     fun reading(context: Context): Reading? {
         val me = Where.last(context) ?: return null
         val them = them(context) ?: return null
-        return Geo.reading(me.latitude, me.longitude, them.latitude, them.longitude)
+        val mine = if (me.hasAccuracy()) me.accuracy.toDouble() else 50.0
+        val spread = Math.hypot(mine, them.accuracy.toDouble())
+        return Geo.reading(me.latitude, me.longitude, them.latitude, them.longitude, spread)
     }
 
     // ---------- Together ----------

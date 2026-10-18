@@ -14,7 +14,7 @@ import kotlin.math.sin
 import kotlin.math.sqrt
 
 /** What there is to show, in order of what matters most. */
-enum class Scene { NOT_SET_UP, NOT_PAIRED, NO_LOCATION, WAITING, PAUSED, APART, TOGETHER }
+enum class Scene { NOT_SET_UP, NOT_PAIRED, NO_LOCATION, WAITING, PAUSED, NEAR, APART, TOGETHER }
 
 /** Everything the screens need, read in one go. */
 data class Snapshot(
@@ -43,6 +43,7 @@ data class Snapshot(
                 Us.together(context) -> Scene.TOGETHER
                 Us.theyPaused(context) -> Scene.PAUSED
                 reading == null -> Scene.WAITING
+                reading.near -> Scene.NEAR
                 else -> Scene.APART
             }
             return Snapshot(scene, Us.name(context), reading, them?.fixAt ?: 0L, Us.changedAt(context))
@@ -189,6 +190,17 @@ object Art {
         canvas.restore()
     }
 
+    /** Too close for a direction: the dial with no arrow and a small heart beating in the middle. */
+    fun nearDial(canvas: Canvas, centerX: Float, centerY: Float, size: Float, north: Double? = null, beat: Float = 1f) {
+        canvas.save()
+        canvas.translate(centerX - size / 2f, centerY - size / 2f)
+        val scale = size / 120f
+        canvas.scale(scale, scale)
+        ringAndDisc(canvas, north, rotate = null)
+        heart(canvas, 60f, 61f, 8f * beat)
+        canvas.restore()
+    }
+
     /**
      * Two little hearts circling in and becoming one bigger heart.
      * @param progress 0 = apart, 1 = merged (run it backwards for parting).
@@ -329,6 +341,7 @@ object Art {
         val name = snap.name.lowercase()
         return when (snap.scene) {
             Scene.TOGETHER -> "Somewhere to my Someone. You're with $name."
+            Scene.NEAR -> "Somewhere to my Someone. $name is near, within about ${snap.reading?.nearWithin ?: 20} metres."
             Scene.APART -> {
                 val r = snap.reading ?: return "Somewhere to my Someone."
                 val d = r.distance
@@ -362,6 +375,7 @@ object Art {
         when {
             merge != null -> hearts(canvas, cx, cy, size, merge)
             snap.scene == Scene.TOGETHER -> hearts(canvas, cx, cy, size, 1f)
+            snap.scene == Scene.NEAR -> nearDial(canvas, cx, cy, size, north = 0.0)
             snap.scene == Scene.APART && r != null -> compass(canvas, cx, cy, size, arrow = r.bearing, north = 0.0)
             else -> compass(canvas, cx, cy, size, arrow = null, north = 0.0)
         }
@@ -409,6 +423,16 @@ object Art {
                     label(context, canvas, freshness(snap), left, statusTop, statusSize, WHITE, maxWidth = room)
                 }
             }
+            snap.scene == Scene.NEAR && r != null -> {
+                val pitch = min(6f * u, room / DotFont.LARGE.width("NEAR"))
+                val headline = 7 * pitch
+                val top = (h - (headline + 12f * u + nameSize + 8f * u + statusSize)) / 2f
+                dots(canvas, DotFont.LARGE, "NEAR", left, top, pitch)
+                val nameTop = top + headline + 12f * u
+                label(context, canvas, snap.name, left, nameTop, nameSize, GREY, maxWidth = room)
+                val words = "WITHIN ${r.nearWithin} M" + if (snap.live) "" else " · ${Geo.ago(snap.updatedAt)}"
+                status(context, canvas, left, nameTop + nameSize + 8f * u, statusSize, u, WHITE, words, w - pad)
+            }
             snap.scene == Scene.PAUSED -> {
                 val pitch = min(5f * u, room / DotFont.LARGE.width("PAUSED"))
                 val headline = 7 * pitch
@@ -450,8 +474,12 @@ object Art {
         val r = snap.reading
 
         when {
-            snap.scene == Scene.TOGETHER || snap.scene == Scene.PAUSED -> {
-                val word = if (snap.scene == Scene.TOGETHER) "TOGETHER" else "PAUSED"
+            snap.scene == Scene.TOGETHER || snap.scene == Scene.PAUSED || snap.scene == Scene.NEAR -> {
+                val word = when (snap.scene) {
+                    Scene.TOGETHER -> "TOGETHER"
+                    Scene.NEAR -> "NEAR"
+                    else -> "PAUSED"
+                }
                 val pitch = min(3.4f * u, room / DotFont.LARGE.width(word))
                 dotsCentered(canvas, word, w / 2f, areaTop + (areaHeight - 7 * pitch) / 2f, pitch, room)
             }

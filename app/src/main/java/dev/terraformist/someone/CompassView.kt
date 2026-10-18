@@ -21,6 +21,9 @@ class CompassView @JvmOverloads constructor(
     /** Which way the top of the screen faces (degrees from north), or null if unknown. */
     var heading: Double? = null
 
+    /** Show the "wave your phone" hint under the title. */
+    var calibrate = false
+
     /** Where the title sits, so a tap area can be put on it. */
     fun titleCenterY(): Float {
         val u = width / 390f
@@ -45,6 +48,9 @@ class CompassView @JvmOverloads constructor(
 
         var y = 40f * u
         Art.label(context, canvas, TITLE, cx, y, 11f * u, Art.GREY, centered = true)
+        if (calibrate && (snap.scene == Scene.APART)) {
+            Art.label(context, canvas, "COMPASS UNSURE: WAVE PHONE IN A FIGURE OF 8", cx, y + 22f * u, 10f * u, Art.WHITE, maxWidth = room, centered = true)
+        }
         y += 11f * u + 48f * u
 
         // Leave room at the bottom for the button.
@@ -58,6 +64,8 @@ class CompassView @JvmOverloads constructor(
 
         if (merge != null) {
             Art.hearts(canvas, cx, y + size / 2f, size, merge, beat)
+        } else if (snap.scene == Scene.NEAR) {
+            Art.nearDial(canvas, cx, y + size / 2f, size, north = h?.let { -it } ?: 0.0, beat = beat)
         } else if (snap.scene == Scene.APART && r != null) {
             val arrow = if (h != null) r.bearing - h else r.bearing
             val north = if (h != null) -h else 0.0
@@ -95,6 +103,13 @@ class CompassView @JvmOverloads constructor(
                 parts += if (snap.live) "LIVE · ${Geo.ago(snap.updatedAt)}" else "UPDATED ${Geo.ago(snap.updatedAt)}"
                 Art.label(context, canvas, parts.joinToString("  /  "), cx, y, 12f * u, Art.WHITE, maxWidth = room, centered = true)
             }
+            snap.scene == Scene.NEAR && r != null -> {
+                y += Art.dotsCentered(canvas, "NEAR", cx, y, 11f * u, room) + 16f * u
+                Art.label(context, canvas, "${snap.name} IS WITHIN ABOUT ${r.nearWithin} M", cx, y, 13f * u, Art.GREY, maxWidth = room, centered = true)
+                y += 13f * u + 14f * u
+                val fresh = if (snap.live) "LIVE · ${Geo.ago(snap.updatedAt)}" else "UPDATED ${Geo.ago(snap.updatedAt)}"
+                Art.label(context, canvas, "TOO CLOSE FOR A DIRECTION  /  $fresh", cx, y, 12f * u, Art.WHITE, maxWidth = room, centered = true)
+            }
             snap.scene == Scene.PAUSED -> {
                 y += Art.dotsCentered(canvas, "PAUSED", cx, y, 9f * u, room) + 18f * u
                 Art.label(context, canvas, "${snap.name} HAS PAUSED SHARING", cx, y, 13f * u, Art.GREY, maxWidth = room, centered = true)
@@ -113,7 +128,7 @@ class CompassView @JvmOverloads constructor(
         }
 
         // Keep drawing while something moves: the merge, and the heartbeat.
-        if (animating || snap.scene == Scene.APART) postInvalidateOnAnimation()
+        if (animating || snap.scene == Scene.APART || snap.scene == Scene.NEAR) postInvalidateOnAnimation()
     }
 
     private fun statusLine(canvas: Canvas, text: String, dotColor: Int, cx: Float, top: Float, u: Float, room: Float) {

@@ -39,6 +39,20 @@ class SharingService : Service() {
     private var syncing = false
     private var lastSyncAt = 0L
 
+    private var foreground = false
+    private var notifiedKey = ""
+    private var widgetKey = ""
+    private var widgetAt = 0L
+    private var bluetoothActive = false
+
+    /** While the Bluetooth check is on, look again every few seconds (for parting, when nothing is heard). */
+    private val judgeTick = object : Runnable {
+        override fun run() {
+            evaluate()
+            if (bluetoothActive) main.postDelayed(this, JUDGE_EVERY_MS)
+        }
+    }
+
     private val tick = object : Runnable {
         override fun run() {
             main.removeCallbacks(this)
@@ -54,7 +68,10 @@ class SharingService : Service() {
         running = true
         near = Near(this) { rssi ->
             main.post {
-                judge.sighting(rssi, System.currentTimeMillis())
+                val now = System.currentTimeMillis()
+                judge.sighting(rssi, now)
+                signal = judge.signal
+                signalAt = judge.signalAt
                 evaluate()
             }
         }
@@ -63,7 +80,7 @@ class SharingService : Service() {
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
-        if (!Us.paired(this) || !Cloud.ready || !goForeground()) {
+        if (!Us.paired(this) || !Cloud.ready || (!foreground && !goForeground())) {
             stopSelf()
             return START_NOT_STICKY
         }
@@ -91,7 +108,11 @@ class SharingService : Service() {
         var types = ServiceInfo.FOREGROUND_SERVICE_TYPE_LOCATION
         if (Near.permitted(this)) types = types or ServiceInfo.FOREGROUND_SERVICE_TYPE_CONNECTED_DEVICE
         return try {
-            startForeground(NOTE_ID, notification(), types)
+            val note = notification()
+            startForeground(NOTE_ID, note.first, types)
+            notifiedKey = note.second
+            foreground = true
+            announce()
             true
         } catch (e: Exception) {
             // Not allowed to start from the background right now.
@@ -159,20 +180,27 @@ class SharingService : Service() {
         // Bluetooth: only when it could matter.
         val meters = if (theyPaused) null else reading?.meters
         val nearby = meters != null && meters < NEARBY_METERS
+        val active = sending && !theyPaused && (together || nearby)
         near.set(
             advertise = when {
-                !sending -> Near.Speed.OFF
-                together -> Near.Speed.SLOW
-                nearby -> Near.Speed.NORMAL
-                else -> Near.Speed.OFF
+                !sending || !(together || nearby) -> Near.Speed.OFF
+                appOpen -> Near.Speed.FAST
+                else -> Near.Speed.NORMAL
             },
             scan = when {
-                theyPaused || !sending -> Near.Speed.OFF
+                !active -> Near.Speed.OFF
+                appOpen -> Near.Speed.FAST
                 together -> Near.Speed.SLOW
-                nearby -> Near.Speed.NORMAL
-                else -> Near.Speed.OFF
+                else -> Near.Speed.NORMAL
             },
         )
+        if (active && !bluetoothActive) {
+            bluetoothActive = true
+            main.postDelayed(judgeTick, JUDGE_EVERY_MS)
+        } else if (!active && bluetoothActive) {
+            bluetoothActive = false
+            main.removeCallbacks(judgeTick)
+        }
 
         // Following this phone: faster when it matters.
         val every = when {
@@ -189,8 +217,38 @@ class SharingService : Service() {
             watchEvery = every
         }
 
-        SomeoneWidget.refreshAll(this)
-        getSystemService(NotificationManager::class.java)?.notify(NOTE_ID, notification())
+        // Redraw the widget only when what it shows has changed (this runs every few seconds).
+        val snap = Snapshot.of(this)
+        val key = "${snap.scene}|${snap.name}|${snap.reading?.distance}|${snap.reading?.near}|" +
+            "${snap.reading?.bearing?.let { (it / 10).toInt() }}|${snap.live}"
+        if (key != widgetKey || now - widgetAt > 60_000L) {
+            widgetKey = key
+            widgetAt = now
+            SomeoneWidget.refreshAll(this)
+        }
+
+        // The sharing notification only changes if sharing is switched off, paused or resumed.
+        val note = notification()
+        if (note.second != notifiedKey) {
+            notifiedKey = note.second
+            getSystemService(NotificationManager::class.java)?.notify(NOTE_ID, note.first)
+        }
+    }
+
+    /** The one notification that says sharing has started. Shown once, until sharing is switched off and on again. */
+    private fun announce() {
+        if (Us.announced(this) || !Us.sendingNow(this)) return
+        Us.setAnnounced(this)
+        getSystemService(NotificationManager::class.java)?.notify(
+            STARTED_ID,
+            Notification.Builder(this, CHANNEL_NEWS)
+                .setSmallIcon(R.drawable.ic_heart)
+                .setContentTitle("You're sharing your location with ${Us.name(this)}")
+                .setContentText("You can pause or stop any time: tap the title in the app.")
+                .setContentIntent(openApp(this))
+                .setAutoCancel(true)
+                .build(),
+        )
     }
 
     private fun syncEvery(): Long {
@@ -243,6 +301,10 @@ class SharingService : Service() {
     }
 
     private fun stopEverything() {
+        main.removeCallbacks(judgeTick)
+        bluetoothActive = false
+        foreground = false
+        signal = null
         near.stop()
         Where.stop(this, watcher)
         watcher = null
@@ -253,30 +315,34 @@ class SharingService : Service() {
 
     // ---------- The notification ----------
 
-    private fun notification(): Notification {
+    /**
+     * The notification Android requires while sharing runs in the background. It's silent and
+     * tucked away at the bottom of the shade, with no status-bar icon. Its words only change if
+     * sharing is switched off, paused or resumed; the second value says which, so it's only
+     * re-posted then.
+     */
+    private fun notification(): Pair<Notification, String> {
         val name = Us.name(this)
-        val now = System.currentTimeMillis()
-        val pausedUntil = Us.pausedUntil(this)
-        val text = when {
-            !Us.sharing(this) -> "You're not sharing your location. You can still see $name."
-            pausedUntil > now -> "Paused for ${((pausedUntil - now) / 60_000L) + 1} more min."
-            Us.together(this) -> "Together with $name."
-            else -> "$name can see where you are."
+        val sending = Us.sendingNow(this)
+        val sharing = Us.sharing(this)
+        val title = when {
+            sending -> "Sharing your location with $name"
+            !sharing -> "Not sharing your location"
+            else -> "Location sharing paused"
         }
         val builder = Notification.Builder(this, CHANNEL_SHARING)
             .setSmallIcon(R.drawable.ic_heart)
-            .setContentTitle(if (Us.sendingNow(this)) "Sharing your location with $name" else "Not sharing your location")
-            .setContentText(text)
+            .setContentTitle(title)
             .setContentIntent(openApp(this))
             .setOngoing(true)
             .setOnlyAlertOnce(true)
-            .setForegroundServiceBehavior(Notification.FOREGROUND_SERVICE_IMMEDIATE)
-        if (Us.sendingNow(this)) {
+            .setShowWhen(false)
+        if (sending) {
             builder.addAction(Notification.Action.Builder(null, "Pause for 1 hour", action(ACTION_PAUSE)).build())
-        } else if (Us.sharing(this)) {
+        } else if (sharing) {
             builder.addAction(Notification.Action.Builder(null, "Share again", action(ACTION_RESUME)).build())
         }
-        return builder.build()
+        return builder.build() to "$name|$sending|$sharing"
     }
 
     private fun action(name: String): PendingIntent = PendingIntent.getForegroundService(
@@ -290,7 +356,12 @@ class SharingService : Service() {
         private const val TAG = "SomewhereToMySomeone"
         private const val NOTE_ID = 1
         private const val ENDED_ID = 2
-        private const val CHANNEL_SHARING = "sharing"
+        private const val STARTED_ID = 3
+        private const val JUDGE_EVERY_MS = 3_000L
+
+        // A new name for the sharing channel, so it starts out silent and minimised.
+        private const val CHANNEL_SHARING = "sharing_quiet"
+        private const val OLD_CHANNEL_SHARING = "sharing"
         private const val CHANNEL_NEWS = "news"
 
         const val ACTION_PAUSE = "dev.terraformist.someone.PAUSE"
@@ -302,6 +373,10 @@ class SharingService : Service() {
 
         /** Within this, the Bluetooth check switches on. */
         private const val NEARBY_METERS = 500.0
+
+        /** The latest Bluetooth signal from their phone (dBm) and when, for the settings screen. */
+        @Volatile var signal: Int? = null
+        @Volatile var signalAt = 0L
 
         /** Set by the app while it's on screen, so updates come quickly. */
         @Volatile var appOpen = false
@@ -325,15 +400,18 @@ class SharingService : Service() {
 
         fun createChannels(context: Context) {
             val manager = context.getSystemService(NotificationManager::class.java) ?: return
+            manager.deleteNotificationChannel(OLD_CHANNEL_SHARING)
             manager.createNotificationChannel(
-                NotificationChannel(CHANNEL_SHARING, "Sharing your location", NotificationManager.IMPORTANCE_LOW).apply {
-                    description = "Shown while your location is shared with your someone"
+                NotificationChannel(CHANNEL_SHARING, "Sharing in the background", NotificationManager.IMPORTANCE_MIN).apply {
+                    description = "The silent notification Android needs while sharing runs in the background"
                     setShowBadge(false)
+                    setSound(null, null)
+                    enableVibration(false)
                 },
             )
             manager.createNotificationChannel(
-                NotificationChannel(CHANNEL_NEWS, "Pairing", NotificationManager.IMPORTANCE_DEFAULT).apply {
-                    description = "When your someone ends the pairing"
+                NotificationChannel(CHANNEL_NEWS, "Sharing started or ended", NotificationManager.IMPORTANCE_DEFAULT).apply {
+                    description = "When you start sharing, or your someone ends the pairing"
                 },
             )
         }

@@ -46,6 +46,28 @@ object Where {
         }
     }
 
+    /**
+     * Whether [fresh] should replace what we have. A rough Wi-Fi or mobile-mast position
+     * (hundreds of metres) mustn't overwrite a good GPS one from moments ago.
+     */
+    fun better(context: Context, fresh: Location): Boolean {
+        val old = last(context) ?: return true
+        val freshAcc = if (fresh.hasAccuracy()) fresh.accuracy else 100f
+        val age = (fresh.time.takeIf { it > 0 } ?: System.currentTimeMillis()) - old.time
+        return when {
+            freshAcc <= 25f -> true
+            age > 2 * 60_000L -> true
+            else -> freshAcc <= old.accuracy * 1.5f + 10f
+        }
+    }
+
+    /** Save [location] if it's at least as good as what we have. Returns whether it was saved. */
+    fun offer(context: Context, location: Location): Boolean {
+        if (!better(context, location)) return false
+        save(context, location)
+        return true
+    }
+
     fun save(context: Context, location: Location) {
         context.getSharedPreferences(PREFS, Context.MODE_PRIVATE).edit()
             .putLong(KEY_LAT, location.latitude.toBits())
@@ -84,20 +106,20 @@ object Where {
             val recent = manager.getProviders(true)
                 .mapNotNull { manager.getLastKnownLocation(it) }
                 .maxByOrNull { it.time }
-            if (recent != null && System.currentTimeMillis() - recent.time < 30_000L) {
-                save(app, recent)
+            if (recent != null && System.currentTimeMillis() - recent.time < 30_000L && recent.accuracy <= 30f) {
+                offer(app, recent)
                 done(recent)
                 return
             }
             val provider = bestProvider(manager)
             if (provider == null) {
-                recent?.let { save(app, it) }
+                recent?.let { offer(app, it) }
                 done(recent)
                 return
             }
             manager.getCurrentLocation(provider, null, worker) { fresh ->
                 val found = fresh ?: recent
-                found?.let { save(app, it) }
+                found?.let { offer(app, it) }
                 main.post { done(found) }
             }
         } catch (e: SecurityException) {
@@ -115,8 +137,7 @@ object Where {
         if (!hasLocation(app)) return null
         val provider = bestProvider(manager) ?: return null
         val listener = LocationListener { location ->
-            save(app, location)
-            onMove(location)
+            if (offer(app, location)) onMove(location)
         }
         val request = LocationRequest.Builder(everyMs)
             .setMinUpdateIntervalMillis(everyMs / 2)

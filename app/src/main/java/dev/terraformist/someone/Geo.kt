@@ -17,7 +17,18 @@ data class Reading(
     val meters: Double,
     /** Compass direction to them, in degrees clockwise from true north. */
     val bearing: Double,
+    /** How far off the two positions could be, together, in metres. */
+    val spread: Double = 0.0,
 ) {
+    /**
+     * Closer than the positions can tell apart: the distance and direction would just be noise
+     * (indoors, both phones often get the same Wi-Fi position). Shown as "NEAR", with no arrow.
+     */
+    val near: Boolean get() = meters < maxOf(spread, NEAR_MIN_METERS)
+
+    /** The rough radius to show with "NEAR", rounded to 10 m. */
+    val nearWithin: Int get() = (Math.ceil(maxOf(spread, NEAR_MIN_METERS) / 10.0) * 10).toInt()
+
     val far: Boolean get() = meters > FAR_METERS
     val close: Boolean get() = meters <= CLOSE_METERS
     val distance: Distance get() = Geo.format(meters)
@@ -29,6 +40,9 @@ data class Reading(
         /** Beyond this, the compass direction stops mattering much. */
         const val FAR_METERS = 100_000.0
 
+        /** "NEAR" never means less than this. */
+        const val NEAR_MIN_METERS = 20.0
+
         /** Within this, the Glyph Matrix draws a needle from the centre. */
         const val CLOSE_METERS = 2_000.0
     }
@@ -38,9 +52,10 @@ object Geo {
 
     private const val EARTH_RADIUS_M = 6_371_000.0
 
-    fun reading(fromLat: Double, fromLon: Double, toLat: Double, toLon: Double): Reading = Reading(
+    fun reading(fromLat: Double, fromLon: Double, toLat: Double, toLon: Double, spread: Double = 0.0): Reading = Reading(
         meters = distanceMeters(fromLat, fromLon, toLat, toLon),
         bearing = bearingDegrees(fromLat, fromLon, toLat, toLon),
+        spread = spread,
     )
 
     /** Great-circle distance in metres. */
