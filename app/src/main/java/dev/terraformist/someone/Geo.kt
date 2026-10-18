@@ -24,10 +24,16 @@ data class Reading(
      * Closer than the positions can tell apart: the distance and direction would just be noise
      * (indoors, both phones often get the same Wi-Fi position). Shown as "NEAR", with no arrow.
      */
-    val near: Boolean get() = meters < maxOf(spread, NEAR_MIN_METERS)
+    val near: Boolean get() = meters < nearLimit
+
+    /**
+     * Below this the arrow could be more than about 30° out, so it isn't shown. That needs the
+     * distance to be at least twice how far off the two positions could be.
+     */
+    private val nearLimit: Double get() = maxOf(2 * spread, NEAR_MIN_METERS)
 
     /** The rough radius to show with "NEAR", rounded to 10 m. */
-    val nearWithin: Int get() = (Math.ceil(maxOf(spread, NEAR_MIN_METERS) / 10.0) * 10).toInt()
+    val nearWithin: Int get() = (Math.ceil(nearLimit / 10.0) * 10).toInt()
 
     val far: Boolean get() = meters > FAR_METERS
     val close: Boolean get() = meters <= CLOSE_METERS
@@ -41,7 +47,7 @@ data class Reading(
         const val FAR_METERS = 100_000.0
 
         /** "NEAR" never means less than this. */
-        const val NEAR_MIN_METERS = 20.0
+        const val NEAR_MIN_METERS = 30.0
 
         /** Within this, the Glyph Matrix draws a needle from the centre. */
         const val CLOSE_METERS = 2_000.0

@@ -57,15 +57,18 @@ re-notified when sending/paused/off changes. Don't add per-minute or "together" 
 
 **Together** (`Near.kt`): Bluetooth advertises/scans under 500 m or while together; FAST
 (low-latency) while the app is open, BALANCED otherwise, low-power scan while together.
-`TogetherJudge` uses the median RSSI of recent readings: together if ≥ 2 readings in 5 s with
-median ≥ −67 dBm, or any one ≥ −55; apart if median < −80 for 15 s or nothing heard for 25 s.
+`TogetherJudge` uses the median RSSI of recent readings: together if the median of the last 10 s
+≥ −70 dBm, or any one reading ≥ −60; apart if median < −82 for 15 s or nothing heard for 30 s.
+(v1 needed 2 readings in 5 s, which background scanning rarely delivers, so only tapping phones worked.)
 A 3 s `judgeTick` re-evaluates while Bluetooth is on (before this, parting waited for the 2-min sync).
 Without Bluetooth: GPS ≤ 15 m together, > 40 m apart. Thresholds are first guesses; the settings
 screen shows live diagnostics (RSSI, both GPS accuracies, GPS distance) for tuning from real use.
 Merge triggers a heartbeat vibration and the widget flip-book.
 
 **NEAR** (`Reading.near`): indoors both phones often get the same Wi-Fi position, so distance and
-bearing under the combined GPS accuracy (hypot of both, min 20 m) are noise. Shown as "NEAR /
+bearing are noise until the distance is at least twice the combined GPS accuracy (hypot of both),
+and never under 30 m. Owner's indoor readings: accuracy ±6–12 m each, GPS distance 2–4 m whether
+side by side, next room or upstairs (GPS can't tell floors apart). Shown as "NEAR /
 WITHIN ~N M" with no arrow (heart beating in the middle of the dial; Glyph: small heart in the
 middle). `Where.offer` keeps a rough fix from overwriting a recent good one. The compass shows
 "COMPASS UNSURE: WAVE PHONE IN A FIGURE OF 8" when the rotation sensor reports low accuracy.

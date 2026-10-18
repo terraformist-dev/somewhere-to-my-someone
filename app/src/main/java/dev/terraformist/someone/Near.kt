@@ -229,7 +229,7 @@ class TogetherJudge {
             return if (!together) {
                 val recent = readings.filter { now - it.first <= JOIN_WINDOW_MS }
                 val m = median(now, JOIN_WINDOW_MS)
-                (recent.size >= 2 && m != null && m >= JOIN_DBM) || recent.any { it.second >= SURE_DBM }
+                (m != null && m >= JOIN_DBM) || recent.any { it.second >= SURE_DBM }
             } else {
                 val lost = lastHeard == 0L || now - lastHeard > LOST_MS
                 val weak = weakSince != 0L && now - weakSince > PART_MS
@@ -252,19 +252,19 @@ class TogetherJudge {
     }
 
     companion object {
-        /** About one or two metres, phone to phone. */
-        const val JOIN_DBM = -67
+        /** About one or two metres, phone to phone (median of the last few seconds). */
+        const val JOIN_DBM = -70
 
         /** Right next to each other: one reading is enough. */
-        const val SURE_DBM = -55
+        const val SURE_DBM = -60
 
         /** Weaker than this is another room. */
-        const val PART_DBM = -80
+        const val PART_DBM = -82
 
-        const val WINDOW_MS = 8_000L
-        const val JOIN_WINDOW_MS = 5_000L
+        const val WINDOW_MS = 10_000L
+        const val JOIN_WINDOW_MS = 10_000L
         const val PART_MS = 15_000L
-        const val LOST_MS = 25_000L
+        const val LOST_MS = 30_000L
 
         const val GPS_JOIN_METERS = 15.0
         const val GPS_PART_METERS = 40.0
